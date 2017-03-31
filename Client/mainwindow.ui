@@ -309,6 +309,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QPushButton" name="SendPushButton">
+            <property name="text">
+             <string>Send</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="QuitPushButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
