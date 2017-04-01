@@ -8,6 +8,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     mySocket = new QUdpSocket(this);
     QObject::connect(mySocket,&QUdpSocket::readyRead,this,&MainWindow::read);
+    ui->QuitPushButton->setEnabled(false);
+    clientnumber=0;
 }
 
 MainWindow::~MainWindow()
@@ -17,8 +19,7 @@ MainWindow::~MainWindow()
 
 
 void MainWindow::on_ConnectPushButton_clicked()
-{    
-    ui->QuitPushButton->setEnabled(false);
+{
     bool aux = mySocket-> bind(QHostAddress::LocalHost, ui->PortSpinBox->value());
     if (aux)
     {
@@ -37,11 +38,27 @@ void MainWindow::read()
     QHostAddress clientaddress = datagram.senderAddress();
     quint16 clientport = datagram.senderPort();
     QByteArray cmessage = datagram.data();
-    QByteArray message("ServerOkey");
-    if(cmessage=="HellowWorld") {
-        mySocket->writeDatagram(message,clientaddress,clientport);
+    QByteArray okmessage("ServerOkey");
+    QByteArray waitmessage("WaitConfirm");
+    QByteArray readymessage("ReadyToSend");
+
+    if(cmessage=="HellowWorld")
+    {
+        mySocket->writeDatagram(okmessage,clientaddress,clientport);
         QMessageBox::information(this,tr("Server"),tr("Message received.\n"),QMessageBox::Ok);
+        clientnumber+=1;
+
+    } else if(cmessage.startsWith("IWantSend")){
+
+        mySocket->writeDatagram(waitmessage,clientaddress,clientport);
+        QMessageBox::information(this,tr("Server"),tr("Message for send received.\n"),QMessageBox::Ok);
+        cmessage.remove(0,10);
+        cmessage.toInt();
+        if(cmessage==clientnumber){
+            mySocket->writeDatagram(readymessage,clientaddress,clientport);
+        }
     }
+
 }
 
 void MainWindow::on_QuitPushButton_clicked()

@@ -5,6 +5,7 @@
 #include <QtNetwork>
 #include <QMessageBox>
 
+
 namespace Ui {
 class MainWindow;
 }
@@ -26,6 +27,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
     QUdpSocket* mySocket;
+    int clientnumber;
 };
 
 #endif // MAINWINDOW_H

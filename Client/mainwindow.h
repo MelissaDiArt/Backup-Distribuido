@@ -18,6 +18,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
     void read();
+    void send();
 
 private slots:
     void on_ConnectPushButton_clicked();
@@ -28,9 +29,12 @@ private slots:
 
     void on_DDPushButton_clicked();
 
+    void on_SendPushButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     QUdpSocket* mySocket;
+
 };
 
 #endif // MAINWINDOW_H
