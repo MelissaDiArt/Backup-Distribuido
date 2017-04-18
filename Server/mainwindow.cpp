@@ -41,7 +41,6 @@ void MainWindow::read()
     QByteArray okmessage("ServerOkey");
     QByteArray waitmessage("WaitConfirm");
     QByteArray readymessage("ReadyToSend");
-
     if(cmessage=="HellowWorld")
     {
         mySocket->writeDatagram(okmessage,clientaddress,clientport);
@@ -52,9 +51,8 @@ void MainWindow::read()
 
         mySocket->writeDatagram(waitmessage,clientaddress,clientport);
         QMessageBox::information(this,tr("Server"),tr("Message for send received.\n"),QMessageBox::Ok);
-        cmessage.remove(0,10);
-        cmessage.toInt();
-        if(cmessage==clientnumber){
+        cmessage.remove(0,9);
+        if(cmessage.toInt()==clientnumber){
             mySocket->writeDatagram(readymessage,clientaddress,clientport);
         }
     }

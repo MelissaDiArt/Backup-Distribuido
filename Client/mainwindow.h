@@ -6,6 +6,8 @@
 #include <QMessageBox>
 #include <QFileDialog>
 
+#include "nomainwindows.h"
+
 namespace Ui {
 class MainWindow;
 }
