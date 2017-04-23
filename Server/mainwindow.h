@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QtNetwork>
 #include <QMessageBox>
+#include <QPair>
 
 
 namespace Ui {
@@ -28,6 +29,9 @@ private:
     Ui::MainWindow *ui;
     QUdpSocket* mySocket;
     int clientnumber;
+    QVector<QPair<QHostAddress,qint16> > clients;
+    QVector<QPair<QHostAddress,qint16> > clients_send;
+    QVector<int> clients_recieve;
 };
 
 #endif // MAINWINDOW_H

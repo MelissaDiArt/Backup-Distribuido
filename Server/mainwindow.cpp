@@ -36,7 +36,7 @@ void MainWindow::read()
 {
     QNetworkDatagram datagram = mySocket->receiveDatagram();
     QHostAddress clientaddress = datagram.senderAddress();
-    quint16 clientport = datagram.senderPort();
+    int clientport = datagram.senderPort();
     QByteArray cmessage = datagram.data();
     QByteArray okmessage("ServerOkey");
     QByteArray waitmessage("WaitConfirm");
@@ -46,14 +46,40 @@ void MainWindow::read()
         mySocket->writeDatagram(okmessage,clientaddress,clientport);
         QMessageBox::information(this,tr("Server"),tr("Message received.\n"),QMessageBox::Ok);
         clientnumber+=1;
+        clients.push_back(QPair<QHostAddress,qint16>(clientaddress,clientport));
+        if(!clients_send.empty())
+        {
+            for(int i=0; i<clients_recieve.size();i++)
+            {
+                if(clients_recieve[i]<=clientnumber-1)
+                {
+                    mySocket->writeDatagram(readymessage,clients_send[i].first,clients_send[i].second);
+                    //break;
+                }
+            }
+        }
 
-    } else if(cmessage.startsWith("IWantSend")){
 
+    } else if(cmessage.startsWith("IWantSend"))
+    {
         mySocket->writeDatagram(waitmessage,clientaddress,clientport);
         QMessageBox::information(this,tr("Server"),tr("Message for send received.\n"),QMessageBox::Ok);
         cmessage.remove(0,9);
-        if(cmessage.toInt()==clientnumber){
+        if(cmessage.toInt()<=(clientnumber-1))
+        {
             mySocket->writeDatagram(readymessage,clientaddress,clientport);
+
+        }else{
+
+            clients_send.push_back(QPair<QHostAddress,qint16>(clientaddress,clientport));
+            clients_recieve.push_back(cmessage.toInt());
+        }
+
+    }else{
+
+        for(auto Client: clients){
+            if(Client.first!=clientaddress||Client.second!=clientport)
+                mySocket->writeDatagram(cmessage,Client.first,Client.second);
         }
     }
 
@@ -64,4 +90,8 @@ void MainWindow::on_QuitPushButton_clicked()
     mySocket->close();
     ui->QuitPushButton->setEnabled(false);
     ui->ConnectPushButton->setEnabled(true);
+    clientnumber=0;
+    clients_send.clear();
+    clients_recieve.clear();
+    clients.clear();
 }

@@ -8,9 +8,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     mySocket = new QUdpSocket(this);
     QObject::connect(mySocket,&QUdpSocket::readyRead,this,&MainWindow::read);
-    ui->SendPushButton->setEnabled(true);
+    ui->AddressLineEdit->setText("127.0.0.1");
+    ui->ConnectPushButton->setEnabled(true);
+    ui->SendPushButton->setEnabled(false);
     ui->QuitPushButton->setEnabled(false);
-    ui->ConnectPushButton->setEnabled(false);
+
 }
 
 MainWindow::~MainWindow()
@@ -26,15 +28,23 @@ void MainWindow::on_ConnectPushButton_clicked()
     QHostAddress address(ui->AddressLineEdit->text());
     quint16 sport(ui->ServerPortSpinBox->value());
 
-    qint64 aux = mySocket->writeDatagram(message,address,sport);
+    if((ui->ClientPortSpinBox->value()!=sport)||(QHostAddress::LocalHost!=ui->AddressLineEdit->text())) {
+        mySocket->bind(QHostAddress::LocalHost, ui->ClientPortSpinBox->value());
 
-    if(aux == -1)
-    {
-        QMessageBox::critical(this,tr("Client"),tr("Write socket error.\n"),QMessageBox::Ok);
+        qint64 aux = mySocket->writeDatagram(message,address,sport);
+
+        if(aux == -1)
+        {
+            QMessageBox::critical(this,tr("Client"),tr("Write socket error.\n"),QMessageBox::Ok);
+
+        } else {
+
+            QMessageBox::information(this,tr("Client"),tr("Message sent.\n"),QMessageBox::Ok);
+        }
 
     } else {
 
-        QMessageBox::information(this,tr("Client"),tr("Message sent.\n"),QMessageBox::Ok);
+        QMessageBox::information(this,tr("Client"),tr("Can't be connected.\n"),QMessageBox::Ok);
     }
 }
 
@@ -47,7 +57,6 @@ void MainWindow::read()
         QMessageBox::information(this,tr("Client"),tr("Message received.\n"),QMessageBox::Ok);
         ui->ConnectPushButton->setEnabled(false);
         ui->QuitPushButton->setEnabled(true);
-        ui->SendPushButton->setEnabled(true);
 
     } else if (cmessage=="WaitConfirm") {
         QMessageBox::information(this,tr("Client"),tr("Message for wait received.\n"),QMessageBox::Ok);
@@ -83,7 +92,7 @@ void MainWindow::send()
         if(fileInfo.isFile())
         {
             QFile file(fileInfo.absoluteFilePath());
-            int n;
+            int n = 0;
             if(file.open(QIODevice::ReadOnly))
             {
                 sended = mySocket->writeDatagram(QByteArray("Path:").append(file.fileName().remove(0, Dir_.lastIndexOf("/")+1).append(" Size:").append(QString::number(file.size()))),address,sport);
@@ -141,6 +150,7 @@ void MainWindow::on_SAPushButton_clicked()
     if(filename.size() != 0)
     {
        ui->DDPushButton->setEnabled(false);
+       ui->SendPushButton->setEnabled(true);
     }
 }
 
