@@ -1,4 +1,4 @@
-#ifndef MAINWINDOW_H
+﻿#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
@@ -33,9 +33,19 @@ private slots:
 
     void on_SendPushButton_clicked();
 
+public slots:
+
+    void enable();
+
 private:
     Ui::MainWindow *ui;
     QUdpSocket* mySocket;
+    QFile* myfile;
+    QByteArray size;
+    qint64 acc;
+    NoMainWindows *progressWindows;
+    QProcess *myProcess;
+    bool temp;
 
 };
 
