@@ -32,6 +32,8 @@ private:
     QVector<QPair<QHostAddress,qint16> > clients;
     QVector<QPair<QHostAddress,qint16> > clients_send;
     QVector<int> clients_recieve;
+    QVector<QPair<QHostAddress,qint16> > clients_live;
+
 };
 
 #endif // MAINWINDOW_H

@@ -47,7 +47,9 @@ void MainWindow::on_ConnectPushButton_clicked()
     timer->setInterval(5000);
     connect(timer,&QTimer::timeout,this, [=](){
         QMessageBox::critical(this,tr("Client Error"),tr("Can't connect to server.\n"),QMessageBox::Ok);
+        timer->deleteLater();
     });
+
 
     if((ui->ClientPortSpinBox->value()!=sport)||(QHostAddress::LocalHost!=ui->AddressLineEdit->text()))
     {
@@ -74,6 +76,9 @@ void MainWindow::read()
     QByteArray cmessage = datagram.data();
     qint64 recievefile = 0;
     QByteArray aux = 0;
+    QString Dir(ui->AddressLineEdit->text());
+    quint16 sport(ui->ServerPortSpinBox->value());
+    QByteArray answer("Client Okey:");
 
     if(cmessage=="ServerOkey")
     {
@@ -153,6 +158,14 @@ void MainWindow::read()
             recievefile +=4096;
         }
         progressWindows->setActualSize(recievefile);
+
+    } else if(cmessage=="Keep alive"){
+
+        qint64 sended = mySocket->writeDatagram(answer,QHostAddress(Dir),sport);
+        if(sended == -1)
+        {
+            QMessageBox::critical(this,tr("Client Error"),tr("Can't keep alive answer\n"),QMessageBox::Ok);
+        }
 
     } else {
 
@@ -263,8 +276,6 @@ void MainWindow::send()
     if(sended == -1)
     {
         QMessageBox::critical(this,tr("Client Error"),tr("Send error"),QMessageBox::Ok);
-    } else {
-        QMessageBox::information(this,tr("Client"),tr("Message send"),QMessageBox::Ok);
     }
 }
 

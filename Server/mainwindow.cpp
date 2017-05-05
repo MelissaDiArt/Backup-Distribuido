@@ -30,6 +30,34 @@ void MainWindow::on_ConnectPushButton_clicked()
     }else{       
         QMessageBox::critical(this,tr("Server"),tr("Unable to connect.\n"),QMessageBox::Ok);
     }
+
+    QTimer *timer = new QTimer();
+    QTimer *timer_answer = new QTimer();
+    timer->setInterval(10000);
+    timer_answer->setInterval(1000);
+    connect(timer,&QTimer::timeout,this,[=](){
+        QByteArray message("Keep alive");
+        for(int i=0; i<clients.size();i++)
+        {
+            mySocket->writeDatagram(message,clients[i].first,clients[i].second);
+        }
+        timer_answer->start();
+    });
+
+    connect(timer_answer,&QTimer::timeout,this,[=](){
+        clients = clients_live;
+
+        for(int i=0; i<clients_send.size();i++)
+        {
+            if(!clients.contains(clients_send[i]))
+            {
+                clients_send.remove(i);
+                clients_recieve.remove(i);
+            }
+        }
+    });
+
+    timer->start();
 }
 
 void MainWindow::read()
@@ -48,7 +76,6 @@ void MainWindow::read()
         if(cmessage=="HellowWorld")
         {
             mySocket->writeDatagram(okmessage,clientaddress,clientport);
-            //QMessageBox::information(this,tr("Server"),tr("Message received.\n"),QMessageBox::Ok);
             clientnumber+=1;
             clients.push_back(QPair<QHostAddress,qint16>(clientaddress,clientport));
             if(!clients_send.empty())
@@ -79,7 +106,12 @@ void MainWindow::read()
                 clients_recieve.push_back(cmessage.toInt());
             }
 
-        }else{
+        }else if(cmessage=="Client Okey:"){
+
+            clients_live.push_back(QPair<QHostAddress,qint16>(clientaddress,clientport));
+            QMessageBox::information(this,tr("Server"),cmessage,QMessageBox::Ok);
+
+        } else {
 
             for(auto Client: clients)
             {
