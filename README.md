@@ -3,11 +3,11 @@ Utilizando Qt he creado un sistema de backup distribuido propio.
 
 La aquitectura será muchos a uno. Es decir, un cliente envia los datos a un servidor y este los distribuye a varios clientes, los cuales almacenan los archivos en su sistema de archivos local:
 
-##Contiene
+## Contiene
 
  * Dos programas: un servidor y un cliente de backup.
 
-##Requerimientos
+## Requerimientos
 
  * El servidor recibe los datos desde el cliente de origen y los retransmite hacia los clientes de destino.
    * Sólo hace falta que haya un servidor en ejecución.
@@ -19,7 +19,7 @@ La aquitectura será muchos a uno. Es decir, un cliente envia los datos a un ser
    * La IP y el puerto del servidor es configurable desde la GUI
    * En cada cliente la carpeta origen o destino de los archivos es configurable desde la GUI.
 
-##Funcionamiento
+## Funcionamiento
 
  * El sistema funciona de la siguiente forma:
    1. El servidor se inicia. El usuario puede configurar el puerto y ponerlo a la escucha.
