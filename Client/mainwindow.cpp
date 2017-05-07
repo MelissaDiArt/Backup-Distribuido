@@ -13,17 +13,35 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->ConnectPushButton->setEnabled(true);
     ui->SendPushButton->setEnabled(false);
     ui->QuitPushButton->setEnabled(false);
+    ui->SAddressLineEdit->setEnabled(true);
+    ui->DAddressLineEdit->setEnabled(true);
+    ui->AddressLineEdit->setEnabled(true);
+    ui->ServerPortSpinBox->setEnabled(true);
+    ui->ClientPortSpinBox->setEnabled(true);
+    ui->ClientNumberSpinBox->setEnabled(true);
+    ui->SAPushButton->setEnabled(true);
+
     myfile = NULL;
     acc = 0;
     size = 0;
+    secuence_number = 0;
     temp = false;
     ihave = true;
 
     progressWindows = new NoMainWindows(this);
 
     connect(progressWindows,&NoMainWindows::ready,this,&MainWindow::enable);
+    connect(&nothread,&mythread::sendpackage,this,&MainWindow::spackage);
+    connect(&nothread,&mythread::totalsize,this,&MainWindow::tsize);
+    connect(&nothread,&mythread::actualsize,this,&MainWindow::asize);
+    connect(&nothread,&mythread::name,this,&MainWindow::name);
+    connect(this, &MainWindow::wantsend, &nothread, &mythread::send);
+    connect(this, &MainWindow::package, &nothread, &mythread::package);
 
-    secuence_number = 0;
+    nothread.setWC(&wcond);
+    nothread.moveToThread(&thread);
+    thread.start();
+    
 }
 
 MainWindow::~MainWindow()
@@ -52,19 +70,32 @@ void MainWindow::on_ConnectPushButton_clicked()
     });
 
 
-    if((ui->ClientPortSpinBox->value()!=sport)||(QHostAddress::LocalHost!=ui->AddressLineEdit->text()))
+    if(((ui->ClientPortSpinBox->value()!=sport)||(QHostAddress::LocalHost!=ui->AddressLineEdit->text())))
     {
-        if(mySocket->bind(QHostAddress::LocalHost, ui->ClientPortSpinBox->value())){
-
-            qint64 aux = mySocket->writeDatagram(message,address,sport);
-
-            if(aux == -1)
+        if((ui->SAddressLineEdit->text()!="")||(ui->DAddressLineEdit->text()!=""))
+        {
+            if(mySocket->state()==QAbstractSocket::BoundState)
             {
-                QMessageBox::critical(this,tr("Client Error"),tr("Write socket error.\n"),QMessageBox::Ok);
-
+                mySocket->close();
             }
-        }else{
-            QMessageBox::critical(this,tr("Client Error"),mySocket->errorString(),QMessageBox::Ok);
+
+            if(mySocket->bind(QHostAddress::LocalHost, ui->ClientPortSpinBox->value())){
+
+                qint64 sended = mySocket->writeDatagram(message,address,sport);
+
+                if(sended == -1)
+                {
+                    QMessageBox::critical(this,tr("Client Error"),tr("Write socket error.\n"),QMessageBox::Ok);
+
+                }
+            }else{
+
+                QMessageBox::critical(this,tr("Client Error"),mySocket->errorString(),QMessageBox::Ok);
+            }
+
+        } else {
+
+            QMessageBox::information(this,tr("Client Error"),tr("You have to change a directory.\n"),QMessageBox::Ok);
         }
 
     } else {
@@ -90,6 +121,10 @@ void MainWindow::read()
         temp = true;
         ui->ConnectPushButton->setEnabled(false);
         ui->QuitPushButton->setEnabled(true);
+        ui->AddressLineEdit->setEnabled(false);
+        ui->ServerPortSpinBox->setEnabled(false);
+        ui->ClientPortSpinBox->setEnabled(false);
+
 
     } else if(cmessage=="ReadyToSend") {
 
@@ -97,7 +132,7 @@ void MainWindow::read()
 
         if(Dir.exists())
         {
-            send();
+            emit wantsend(ui->SAddressLineEdit->text());
         } else {
             QMessageBox::information(this,tr("Client"), tr("Directory doesn't exisits\n"),QMessageBox::Ok);
         }
@@ -113,6 +148,7 @@ void MainWindow::read()
     } else if(cmessage.startsWith("First D:")) {
 
         this->setEnabled(false);
+        progressWindows->setWindowTitle("Reciving");
         progressWindows->show();
         progressWindows->setEnabled(true);
         cmessage.remove(0,8);
@@ -121,9 +157,7 @@ void MainWindow::read()
 
         if(!DDir.exists())
         {
-
             DDir.mkpath(ui->DAddressLineEdit->text().append("/").append(cmessage));
-
         }
         recievefile =4096;
 
@@ -133,7 +167,6 @@ void MainWindow::read()
 
         if(size.toLongLong() == acc)
         {
-            recievefile += acc;
             acc = 0;
             QByteArray toremovemessage = cmessage;
             cmessage.remove(0,5);
@@ -169,13 +202,9 @@ void MainWindow::read()
             if(!DiDir.exists())
             {
                 DiDir.mkpath(ui->DAddressLineEdit->text().append("/").append(cmessage));
-                qint64 sended = mySocket->writeDatagram(QByteArray("Directory completed:"),QHostAddress(Dir),sport);
-                if(sended == -1)
-                {
-                    QMessageBox::critical(this,tr("Client Error"),tr("Directory incompleted\n"),QMessageBox::Ok);
-                }
-                recievefile +=4096;
+
             }
+            recievefile +=4096;
             progressWindows->setActualSize(recievefile);
             secuence_number+=1;
             ihave = true;
@@ -202,7 +231,7 @@ void MainWindow::read()
 
         cmessage1 = cmessage;
         cmessage.remove(0,cmessage.indexOf("//")+2);
-        cmessage1.remove(cmessage1.indexOf("//"),cmessage1.size()-cmessage.indexOf("//")+2);
+        cmessage1.remove(cmessage1.indexOf("//"),cmessage1.size()-cmessage1.indexOf("//"));
         cmessage1.remove(0,cmessage1.indexOf(":")+1);
 
         if(cmessage1.toLongLong()==secuence_number)
@@ -243,142 +272,12 @@ void MainWindow::read()
             ihave = false;
         }
     } else if(cmessage.startsWith("Package:")){
-
-        bool done = false;
-        bool stop = false;
-        cmessage.remove(0,cmessage1.indexOf("Package:")+8);
-        for(int i=0;(i<secuence_reference_d.size()-1)&&(!stop);i++)
-        {
-            if((cmessage.toLongLong()>=secuence_reference_d[i].first)&&(cmessage.toLongLong()<secuence_reference_d[i+1].first))
-            {
-                qint16 sended = mySocket->writeDatagram(QByteArray("Directoryy:").append(QByteArray("SN:")).append(secuence_reference_d[i].first).append(QByteArray("//")).append(secuence_reference_d[i].second),QHostAddress(Dir),sport);
-                if(sended == -1)
-                {
-                    QMessageBox::critical(this,tr("Client Error"),tr("Can't resend package left to server\n"),QMessageBox::Ok);
-                }
-                done = true;
-                stop = true;
-            }
-        }
-
-        if(!done)
-        {
-            for(int i=0;i<secuence_reference_f.size();i++)
-            {
-                if((cmessage.toLongLong()>=secuence_reference_f[i].first)&&(cmessage.toLongLong()<secuence_reference_f[i+1].first))
-                {
-                    myfile->seek(secuence_reference_f[i].second);
-
-                }
-            }
-        }
+        emit package(cmessage);
     } else if(cmessage =="File completed:") {
-
-    } else if(cmessage == "Directory completed:"){
-
+        wcond.wakeAll();
     }
 }
 
-void MainWindow::send()
-{
-    QString Dir(ui->SAddressLineEdit->text());
-    QString Dir_= Dir;
-    quint16 sport(ui->ServerPortSpinBox->value());
-    QHostAddress address(ui->AddressLineEdit->text());
-    QDirIterator iterator(Dir,QDir::NoDot  | QDir::NoDotDot | QDir::Hidden | QDir::Files | QDir::Dirs, QDirIterator::Subdirectories);
-    qint64 secuence_number = 0;
-
-    myProcess = new QProcess(this);
-    QStringList arguments = (QStringList() << "-sbc" << Dir);
-    myProcess->setProgram("du");
-    myProcess->setArguments(arguments);
-    myProcess->start();
-    myProcess->waitForReadyRead();
-    QByteArray aux = myProcess->readAllStandardOutput();
-    aux.remove(aux.indexOf("\t"), aux.size() - aux.indexOf("\t"));
-
-    mySocket->writeDatagram(QByteArray("Total s:").append(QByteArray().setNum(aux.toLongLong())),address,sport);
-
-    myProcess->close();
-    delete myProcess;
-
-    progressWindows->setTotalSize(aux.toLongLong());
-    progressWindows->setName(Dir_.remove(0,Dir_.lastIndexOf("/")+1));
-    progressWindows->setWindowTitle("Sending");
-
-    qint16 sended = mySocket->writeDatagram(QByteArray("First D:").append(Dir_),address,sport);
-
-    this->setEnabled(false);
-    progressWindows->show();
-    progressWindows->setEnabled(true);
-
-    qint64 sendfile = 4096;
-
-    while(iterator.hasNext())
-    {
-        iterator.next();
-        QFileInfo fileInfo = iterator.fileInfo();
-
-        if(fileInfo.isFile())
-        {
-            QFile file(fileInfo.absoluteFilePath());
-            qint64 n = 0;
-            if(file.open(QIODevice::ReadOnly))
-            {
-                sended = mySocket->writeDatagram(QByteArray("Path:").append(file.fileName().remove(0, Dir.lastIndexOf("/")+1)).append(" Size:").append(QString::number(file.size())),address,sport);
-
-                while(n < file.size())
-                {
-                  QByteArray data = file.read(3145728);
-                  secuence_reference_f.push_back(QPair<qint64,qint64>(secuence_number,file.pos()));
-                  int block = 0;
-                  while(block < data.size())
-                  {
-                     QByteArray fileBlock(data);
-                     if((block+512) < data.size())
-                     {
-                         fileBlock.remove(block+512, fileBlock.size()-(block+512));
-                     }
-                     fileBlock.remove(0,block);
-                     sended = mySocket->writeDatagram(QByteArray("SN:").append(QByteArray().setNum(secuence_number).append(QByteArray("//").append(fileBlock))),address,sport);
-                     secuence_number+=1;
-                     qApp->processEvents();
-                     if(sended == -1)
-                     {
-                         QMessageBox::warning(this,tr("Client Error"),tr("Can't send file"),QMessageBox::Ok);
-                     } else {
-
-                         block +=512;
-                         sendfile += fileBlock.size();
-                         progressWindows->setActualSize(sendfile);
-                     }
-                  }
-                  n+=3145728;
-                }
-            }
-
-        } else if (fileInfo.isDir()) {
-
-             qint16 sended = mySocket->writeDatagram(QByteArray("Directoryy:").append(QByteArray("SN:")).append(QByteArray().setNum(secuence_number)).append(QByteArray("//")).append(fileInfo.absoluteFilePath().remove(0, Dir.lastIndexOf("/")+1)),address,sport);
-
-             QByteArray aux;
-             aux.append(fileInfo.absoluteFilePath().remove(0, Dir.lastIndexOf("/")+1));
-             secuence_reference_d.push_back(QPair<qint64,QByteArray>(secuence_number,aux));
-             secuence_number+=1;
-             if(sended == -1)
-             {
-                 QMessageBox::warning(this,tr("Client Error"),tr("Can't send directory"),QMessageBox::Ok);
-             }
-             sendfile +=4096;
-             progressWindows->setActualSize(sendfile);
-        }
-    }
-
-    if(sended == -1)
-    {
-        QMessageBox::critical(this,tr("Client Error"),tr("Send error"),QMessageBox::Ok);
-    }
-}
 
 //Boton para cerrar la conexion
 void MainWindow::on_QuitPushButton_clicked()
@@ -390,8 +289,15 @@ void MainWindow::on_QuitPushButton_clicked()
     ui->DDPushButton->setEnabled(true);
     ui->SAPushButton->setEnabled(true);
     ui->SAddressLineEdit->setText("");
+    ui->SAddressLineEdit->setEnabled(true);
     ui->DAddressLineEdit->setText("");
+    ui->DAddressLineEdit->setEnabled(true);
     ui->ClientNumberSpinBox->setValue(0);
+    ui->AddressLineEdit->setEnabled(true);
+    ui->ServerPortSpinBox->setEnabled(true);
+    ui->ClientPortSpinBox->setEnabled(true);
+    ui->ClientNumberSpinBox->setEnabled(true);
+    ui->SAPushButton->setEnabled(true);
 }
 
 //Boton para especificar la ruta a enviar.
@@ -421,6 +327,10 @@ void MainWindow::on_DDPushButton_clicked()
 //Boton para enviar un mensaje de quiero enviar
 void MainWindow::on_SendPushButton_clicked()
 {
+    ui->SAddressLineEdit->setEnabled(false);
+    ui->DAddressLineEdit->setEnabled(false);
+    ui->ClientNumberSpinBox->setEnabled(false);
+    ui->SAPushButton->setEnabled(false);
     QByteArray message("IWantSend");
     QString clientNumber;
     QHostAddress address(ui->AddressLineEdit->text());
@@ -452,4 +362,51 @@ void MainWindow::on_SendPushButton_clicked()
 void MainWindow::enable()
 {
     this->setEnabled(true);
+}
+
+void MainWindow::spackage(QByteArray pack)
+{
+    qint64 aux = mySocket->writeDatagram(pack,QHostAddress(ui->AddressLineEdit->text()),ui->ServerPortSpinBox->value());
+
+    if(aux == -1)
+    {
+        QMessageBox::critical(this,tr("Client Error"),tr("Write socket error.\n"),QMessageBox::Ok);
+
+    }
+}
+
+void MainWindow::tsize(qint64 size)
+{
+    progressWindows->setWindowTitle("Sending");
+    progressWindows->setTotalSize(size);
+    this->setEnabled(false);
+    progressWindows->show();
+    progressWindows->setEnabled(true);
+}
+
+void MainWindow::asize(qint64 size)
+{
+    progressWindows->setActualSize(size);
+}
+
+void MainWindow::name(QString name)
+{
+    progressWindows->setName(name);
+}
+
+void MainWindow::on_SAddressLineEdit_editingFinished()
+{
+    QDir Dir(ui->SAddressLineEdit->text());
+    if(Dir.exists())
+    {
+        ui->SendPushButton->setEnabled(true);
+    }
+}
+
+
+void MainWindow::on_DAddressLineEdit_editingFinished()
+{
+    ui->ClientNumberSpinBox->setEnabled(false);
+    ui->SendPushButton->setEnabled(false);
+
 }

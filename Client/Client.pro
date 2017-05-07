@@ -25,10 +25,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    nomainwindows.cpp
+    nomainwindows.cpp \
+    mythread.cpp
 
 HEADERS  += mainwindow.h \
-    nomainwindows.h
+    nomainwindows.h \
+    mythread.h
 
 FORMS    += mainwindow.ui \
     nomainwindows.ui

@@ -7,6 +7,7 @@
 #include <QFileDialog>
 
 #include "nomainwindows.h"
+#include "mythread.h"
 
 namespace Ui {
 class MainWindow;
@@ -33,9 +34,25 @@ private slots:
 
     void on_SendPushButton_clicked();
 
+    void on_SAddressLineEdit_editingFinished();
+
+    void on_DAddressLineEdit_editingFinished();
+
 public slots:
 
     void enable();
+
+    void spackage(QByteArray pack);
+
+    void tsize(qint64 size);
+
+    void asize(qint64 size);
+
+    void name(QString name);
+
+signals:
+    void wantsend(QString dir);
+    void package(QByteArray package);
 
 private:
     Ui::MainWindow *ui;
@@ -45,14 +62,18 @@ private:
     qint64 acc;
     NoMainWindows *progressWindows;
     QProcess *myProcess;
-    bool temp;
-    bool ihave;
     QVector<QPair<qint64,qint64> > secuence_reference_f;
     QVector<QPair<qint64,QByteArray> > secuence_reference_d;
     qint64 recievefile;
     qint64 secuence_number;
-
-
+    QMutex lock;
+    QWaitCondition wcond;
+    mythread nothread;
+    QThread thread;
+    ulong time;
+    bool filecomp;
+    bool temp;
+    bool ihave;
 };
 
 #endif // MAINWINDOW_H

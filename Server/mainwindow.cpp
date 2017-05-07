@@ -58,7 +58,7 @@ void MainWindow::on_ConnectPushButton_clicked()
         }
     });
 
-    timer->start();
+    //timer->start();
 }
 
 void MainWindow::read()
