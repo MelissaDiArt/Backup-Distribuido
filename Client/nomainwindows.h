@@ -30,8 +30,8 @@ signals:
 private:
     Ui::NoMainWindows *ui;
     QString Name;
-    qint16 ActualSize;
-    qint16 TotalSize;
+    qint64 ActualSize;
+    qint64 TotalSize;
 };
 
 #endif // NOMAINWINDOWS_H

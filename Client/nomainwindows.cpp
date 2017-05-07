@@ -9,6 +9,7 @@ NoMainWindows::NoMainWindows(QWidget *parent) :
     ActualSize = 0;
     TotalSize = 0;
     Name = "";
+    ui->FinishPushButton->setEnabled(false);
 }
 
 NoMainWindows::~NoMainWindows()
@@ -32,6 +33,9 @@ void NoMainWindows::setActualSize(qint64 size)
 {
     ActualSize = size;
     ui->progressBar->setValue(ActualSize);
+    if(ActualSize == TotalSize) {
+        ui->FinishPushButton->setEnabled(true);
+    }
 }
 
 void NoMainWindows::on_FinishPushButton_clicked()

@@ -46,6 +46,12 @@ private:
     NoMainWindows *progressWindows;
     QProcess *myProcess;
     bool temp;
+    bool ihave;
+    QVector<QPair<qint64,qint64> > secuence_reference_f;
+    QVector<QPair<qint64,QByteArray> > secuence_reference_d;
+    qint64 recievefile;
+    qint64 secuence_number;
+
 
 };
 

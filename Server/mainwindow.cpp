@@ -41,7 +41,8 @@ void MainWindow::on_ConnectPushButton_clicked()
         {
             mySocket->writeDatagram(message,clients[i].first,clients[i].second);
         }
-        timer_answer->start();
+        if(clients.size()>0)
+            timer_answer->start();
     });
 
     connect(timer_answer,&QTimer::timeout,this,[=](){
@@ -94,7 +95,6 @@ void MainWindow::read()
         } else if(cmessage.startsWith("IWantSend"))
         {
             mySocket->writeDatagram(waitmessage,clientaddress,clientport);
-            //QMessageBox::information(this,tr("Server"),tr("Message for send received.\n"),QMessageBox::Ok);
             cmessage.remove(0,9);
             if(cmessage.toInt()<=(clientnumber-1))
             {
@@ -109,7 +109,6 @@ void MainWindow::read()
         }else if(cmessage=="Client Okey:"){
 
             clients_live.push_back(QPair<QHostAddress,qint16>(clientaddress,clientport));
-            QMessageBox::information(this,tr("Server"),cmessage,QMessageBox::Ok);
 
         } else {
 
