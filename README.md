@@ -1,18 +1,27 @@
 # Backup distribuido
-Con la ayuda de Qt vamos a crear nuestro propio sistema de backup distribuido.
+Utilizando Qt he creado un sistema de backup distribuido propio.
 
-En principio la aquitectura será muchos a uno. Es decir, un cliente enviará los datos a un servidor. Este los distribuirá a varios clientes, que a su vez almacenarán los archivos en su sistema de archivos local:
+La aquitectura será muchos a uno. Es decir, un cliente envia los datos a un servidor y este los distribuye a varios clientes, los cuales almacenan los archivos en su sistema de archivos local:
 
- * Necesitaremos dos programas: un servidor y un cliente de backup.
- * La función del servidor es recibir los datos desde el cliente de origen y retransmitirlos hacia los clientes de destino.
+##Contiene
+
+ * Dos programas: un servidor y un cliente de backup.
+
+##Requerimientos
+
+ * El servidor recibe los datos desde el cliente de origen y los retransmite hacia los clientes de destino.
    * Sólo hace falta que haya un servidor en ejecución.
-   * El puerto de escucha del servidor debe ser configurable desde la GUI.
- * Al mismo tiempo se pueden estar ejecutando múltiples clientes en distintas máquinas.
-   * Uno será el origen de los datos a copiar. Los leerá y enviará al servidor para su retransmisión.
-   * El resto recibirán los datos desde el servidor para hacer la copia de seguridad en un directorio local.
-   * La IP y el puerto del servidor al que deben conectarse los clientes debe ser configurable desde la GUI
-   * En cada cliente la carpeta origen o destino de los archivos debe ser configurable desde la GUI.
- * El sistema podría funcionar a así:
+   * El puerto de escucha del servidor se configura desde GUI.
+
+ * Al mismo tiempo pueden estarse ejecutando múltiples clientes en distintas máquinas.
+   * Uno es el origen quien envia los datos al servidor.
+   * El resto de clientes reciben los datos desde el servidor para hacer la copia de seguridad en un directorio local.
+   * La IP y el puerto del servidor es configurable desde la GUI
+   * En cada cliente la carpeta origen o destino de los archivos es configurable desde la GUI.
+
+##Funcionamiento
+
+ * El sistema funciona de la siguiente forma:
    1. El servidor se inicia. El usuario puede configurar el puerto y ponerlo a la escucha.
    2. Un cliente se inicia.
       * El usuario puede configurar la dirección del servidor, elegir la carpeta de destino y conectarlo como cliente de destino.
@@ -20,43 +29,26 @@ En principio la aquitectura será muchos a uno. Es decir, un cliente enviará lo
    3. Los clientes de destino esperan indefinidamente hasta que el servidor inicia la transferencia.
    4. Los clientes de origen esperan hasta que hay suficientes clientes conectados en el servidor, entonces empiezan a recorrer el directorio y a transferir hacia el servidor.
    5. El servidor envía los datos recibidos del cliente origen a los clientes destino, que deben reconstruir el arbol de directorios en su carpeta local.
-   6. Durante la transferencia los clientes y el servidor deben mostrar el progreso de la copia:
-      * El nombre del archivo que se está copiando actualmente.
-      * Una barra de progreso, que puede ser global de toda la copia o sólo del progreso sobre el archivo actual.
-   7. Hay que incluir medidas de contrapresión para evitar problemas como los mencionados en la teoría.
-
-## Cómo empezar
-
- 1. Acepta la [tarea asignada de GitHub Classroom](https://classroom.github.com/assignment-invitations/e00c36345e701f3f266fbc98b2a979a5). Así obtendrás tu propio repositorio como una copia de este. A este repositorio lo llamaremos `upstream`.
- 2. Haz un [fork](https://guides.github.com/activities/forking/) de `upstream`. Al nuevo repositorio lo llamaremos `origin`.
- 3. [Clona](http://gitref.org/creating/#clone) `origin` en tu ordenador.
- 4. Trabaja en tu copia local para desarrollar tu monitor del sistema, siguiendo los pasos indicados en el siguiente apartado.
- 5. Modifica README.md usando [Markdown](https://guides.github.com/features/mastering-markdown/) para:
-   1. Explicar cómo compilar y probar la aplicación, incluyendo los requisitos requeridos para hacerlo.
-   2. Explicar los detalles del diseño del protocolo utilizado. Imagina que lo estás explicando para que otro desarrollador pueda crear un cliente o un servidor compatible.
-   3. Comentar las características implementadas.
- 5. [Sube](http://gitref.org/remotes/#push) los cambios al repositorio `origin` en GitHub.
- 6. Crea un [pull request](https://help.github.com/articles/creating-a-pull-request) de `origin` a `upstream` para entregar la práctica.
+   6. Durante la transferencia los clientes muestran el progreso de la copia:
+      * El nombre del directorio que se está copiando.
+      * Muestra el progreso de la copia total.
+   7. Incluye control de congestión para evitar la pérdida de paquetes.
 
 ## Protocolo
 
-El paso más importante es el diseño del protocolo. Algunas cuestiones son generales:
+He creado un protocolo propio:
 
- * ¿Qué protocolo de transporte usar? TCP, UDP, etc.
- * ¿Protocolo binario o texto?
- * ¿Usar un formato conocido...? [JSON](http://doc.qt.io/qt-5/json.html), [Protocol Buffer](https://jmtorres.webs.ull.es/me/2013/03/implementando-un-protocolo-con-protocol-buffers/), etc.
- * ¿...o crear nuestro propio formato? ¿con delimitadores? ¿tamaño fijo? ¿inspirarnos en un protocolo conocido, como HTTP?
- * ¿Cómo vamos a comprobar que la conexión sigue activa.
+ * ¿Qué protocolo de transporte usa?: UDP
+ * ¿Protocolo binario o texto?: texto
+ * ¿Formato?: Formato propio.
+ * ¿Comprobar conexiones activas?: keep alive
 
-Otras dependen de la aplicación concreta que estamos a desarrollando. Hay que pensar en las distintas etapas y qué información hay que comunicar y a quién en cada una:
+Otras dependen de la aplicación:
 
- * ¿Serán necesarios diferentes tipos de mensajes? ¿cómo se van a diferenciar unos de otros?
- * ¿Cómo va a saber el cliente origen cuándo iniciar la transferencia?
- * ¿Qué información debe ir junto a los datos de los archivos? ¿ruta? ¿tamaño?
- * ¿Qué información hace falta para mantener actualizada las barras de progreso?
+ * Diferentes tipos de mensajes diferenciados en la funcion read();
+ * Para iniciar el envío el cliente recibe un mensaje de ReadytoSend.
+ * Junto a los datos de los archivos incluimos ruta, tamaño, número de paquete etc..
+ * Para mantener actualizada la barra de progreso utilizamos un tamaño actual que se incrementa al enviar un paquete.
  
-Puedes elegir la soluciones que prefieras.
 
-## Opcional
 
- * No sería muy complicado tener un sistema muchos a muchos. Muchos clientes origen mandando sus copias a un servidor para que los múltiples clientes destino hagan copia. En ese caso sería conveniente que en los paquetes se incluyera el nombre de la máquina origen, para organizar los archivos en distintos subdirectorios, según el cliente que los envía, evitando colisiones.
